@@ -51,6 +51,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     particles.at(i).y = distribution_y(gen);
     particles.at(i).theta = distribution_theta(gen);
     particles.at(i).weight = 1.0;
+    weights.emplace_back(particles.at(i).weight);
   }
   is_initialized = true;
 }
