@@ -70,6 +70,12 @@ int main() {
             double sense_theta = std::stod(j[1]["sense_theta"].get<string>());
 
             pf.init(sense_x, sense_y, sense_theta, sigma_pos);
+            for(int i=0; i<100; i++)
+            {
+            std::cout << "=====Particles id: " << pf.particles[i].id << std::endl;
+            std::cout << "=====Particles id: " << pf.particles[i].x << std::endl;
+
+            }
           } else {
             // Predict the vehicle's next state from previous 
             //   (noiseless control) data.
