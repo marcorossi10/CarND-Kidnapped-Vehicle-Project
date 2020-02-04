@@ -38,11 +38,14 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   std::normal_distribution<double> distribution_x(x, std[0]);
   std::normal_distribution<double> distribution_y(y, std[1]);
   std::normal_distribution<double> distribution_theta(theta, std[2]);
+
+  //Create a vector of empty particles
   for(int i=0; i<num_particles; i++)
   {
     Particle particle{};
     particles.emplace_back(particle);
   }
+
   // Set all the particles to initialization values sampling from the gaussian distribution
   for(int i=0; i<num_particles; i++)
   {
@@ -65,13 +68,35 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  
+  // Create a normal distribution for x,y,theta with the associated variances
+  std::default_random_engine gen;
+  std::normal_distribution<double> distribution_x(0.0, std_pos[0]);
+  std::normal_distribution<double> distribution_y(0.0, std_pos[1]);
+  std::normal_distribution<double> distribution_theta(0.0, std_pos[2]);
 
+  //Implement bycicle model prediction for each particle
+  for(int i=0; i<num_particles; i++)
+  {
+    if (yaw_rate < 0.00001) //this if-else is to handle also cases where the particle has constant yaw (i.e. zero yaw rate)
+    {
+      particles.at(i).x = particles.at(i).x + velocity*delta_t*cos(particles.at(i).theta) + distribution_x(gen);
+      particles.at(i).y = particles.at(i).y + velocity*delta_t*sin(particles.at(i).theta) + distribution_y(gen);
+      particles.at(i).theta = particles.at(i).theta + distribution_theta(gen);
+    }
+    else 
+    {
+      particles.at(i).x = particles.at(i).x + (velocity/yaw_rate)*(sin(particles.at(i).theta+(yaw_rate*delta_t)) - sin(particles.at(i).theta)) + distribution_x(gen);
+      particles.at(i).y = particles.at(i).y + (velocity/yaw_rate)*(cos(particles.at(i).theta) - cos(particles.at(i).theta+(yaw_rate*delta_t))) + distribution_y(gen);
+      particles.at(i).theta = particles.at(i).theta + yaw_rate*delta_t + distribution_theta(gen);
+    }
+  }
 }
 
-void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted, 
+void ParticleFilter::dataAssociation(vector<LandmarkObs> landmarks, 
                                      vector<LandmarkObs>& observations) {
   /**
-   * TODO: Find the predicted measurement that is closest to each 
+   * TODO: Find the landmark that is closest to each 
    *   observed measurement and assign the observed measurement to this 
    *   particular landmark.
    * NOTE: this method will NOT be called by the grading code. But you will 
