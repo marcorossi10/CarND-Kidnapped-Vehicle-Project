@@ -104,6 +104,15 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> landmarks,
    *   during the updateWeights phase.
    */
 
+  double min_dist = std::numeric_limits<double>::max();
+  for (int i = 0; i < observations.size(); i++)
+  {
+    for (int j = 0; j < predicted_landmarks.size(); j++)
+    {
+      //current_dist = dist(observations[i].x, observations[i].y, predicted_landmarks[i].x, predicted_landmarks[i].y);
+    }
+
+  }
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -122,6 +131,35 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
+
+  for (int i = 0; i < num_particles; i++)
+  {
+    //Transform measurements in map coordinate system (homogeneous transformation) for each particle
+    vector<LandmarkObs> observations_in_map_ref_system{};
+    for  (int j = 0; j < observations.size(); j++)
+    {
+      LandmarkObs current_map_obs;
+      current_map_obs.id = observations[j].id;
+      current_map_obs.x = particles[i].x + (cos(particles[i].theta) * observations[j].x) - (sin(particles[i].theta) * observations[j].y);
+      current_map_obs.y = particles[i].y + (sin(particles[i].theta) * observations[j].x) + (cos(particles[i].theta) * observations[j].y);
+      observations_in_map_ref_system.emplace_back(current_map_obs);
+    }
+
+    //Find the landmarks (on map) in the sensor range for each particle:
+    //The distance between particle and landmark has to be smaller than sensor_range
+    vector<LandmarkObs> seen_landmarks{};
+    for  (int j = 0; j < map_landmarks.landmark_list.size(); j++)
+    {
+      double particle2landmark_dist{dist(particles[i].x, particles[i].y, map_landmarks.landmark_list[j].x_f, map_landmarks.landmark_list[j].y_f)};
+      if (particle2landmark_dist < sensor_range)
+      {
+        seen_landmarks.emplace_back(LandmarkObs{map_landmarks.landmark_list[j].id_i, map_landmarks.landmark_list[j].x_f, map_landmarks.landmark_list[j].y_f});
+      }
+    }
+
+    //Data association
+  }
+
 
 }
 
