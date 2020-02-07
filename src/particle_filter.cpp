@@ -30,7 +30,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 100;  // TODO: Set the number of particles
+  num_particles = 20;  // TODO: Set the number of particles
   //std::vector<Particle> particles{};
   
   // Create a normal distribution for x,y,theta with the associated variances
@@ -78,7 +78,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
   //Implement bycicle model prediction for each particle
   for(int i=0; i<num_particles; i++)
   {
-    if (yaw_rate < 0.00001) //this if-else is to handle also cases where the particle has constant yaw (i.e. zero yaw rate)
+    if (std::abs(yaw_rate) < 0.00001) //this if-else is to handle also cases where the particle has constant yaw (i.e. zero yaw rate)
     {
       particles.at(i).x = particles.at(i).x + velocity*delta_t*cos(particles.at(i).theta) + distribution_x(gen);
       particles.at(i).y = particles.at(i).y + velocity*delta_t*sin(particles.at(i).theta) + distribution_y(gen);
@@ -104,7 +104,7 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> landmarks,
    *   during the updateWeights phase.
    */
 
-  double min_dist{std::numeric_limits<double>::max()};
+double min_dist{std::numeric_limits<double>::max()};
   for (int i = 0; i < observations.size(); i++)
   {
     for (int j = 0; j < landmarks.size(); j++)
@@ -173,7 +173,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       {
         if (seen_landmarks[k].id == observations_in_map_ref_system[j].id) //Update weight when the closest landmark is found
         {
-          particles[i].weight = multiv_prob(std_landmark[0], std_landmark[1], observations_in_map_ref_system[j].x, observations_in_map_ref_system[j].y, seen_landmarks[k].x, seen_landmarks[k].y);
+          particles[i].weight = particles[i].weight*multiv_prob(std_landmark[0], std_landmark[1], observations_in_map_ref_system[j].x, observations_in_map_ref_system[j].y, seen_landmarks[k].x, seen_landmarks[k].y);
           break;
         }
       }
@@ -195,7 +195,7 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
-
+  
 }
 
 void ParticleFilter::SetAssociations(Particle& particle, 
