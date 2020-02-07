@@ -104,14 +104,18 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> landmarks,
    *   during the updateWeights phase.
    */
 
-  double min_dist = std::numeric_limits<double>::max();
+  double min_dist{std::numeric_limits<double>::max()};
   for (int i = 0; i < observations.size(); i++)
   {
-    for (int j = 0; j < predicted_landmarks.size(); j++)
+    for (int j = 0; j < landmarks.size(); j++)
     {
-      //current_dist = dist(observations[i].x, observations[i].y, predicted_landmarks[i].x, predicted_landmarks[i].y);
+      double current_dist{dist(observations[i].x, observations[i].y, landmarks[j].x, landmarks[j].y)};
+      if (current_dist < min_dist)
+      {
+        observations[i].id = landmarks[j].id;
+        min_dist = current_dist;
+      }
     }
-
   }
 }
 
@@ -131,7 +135,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
-
+  
+  double sum_all_weights{0.0};
   for (int i = 0; i < num_particles; i++)
   {
     //Transform measurements in map coordinate system (homogeneous transformation) for each particle
@@ -157,10 +162,30 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       }
     }
 
-    //Data association
+    //Data association: associate the map landmarks id (in range) with the observations
+    dataAssociation(seen_landmarks, observations_in_map_ref_system);
+
+    //Update the weight for each particle
+    particles[i].weight = 1.0;
+    for  (int j = 0; j < observations_in_map_ref_system.size(); j++)
+    {
+      for (int k = 0; k < seen_landmarks.size(); k++)
+      {
+        if (seen_landmarks[k].id == observations_in_map_ref_system[j].id) //Update weight when the closest landmark is found
+        {
+          particles[i].weight = multiv_prob(std_landmark[0], std_landmark[1], observations_in_map_ref_system[j].x, observations_in_map_ref_system[j].y, seen_landmarks[k].x, seen_landmarks[k].y);
+          break;
+        }
+      }
+    }
+    // weights[i] = particles[i].weight;
+    sum_all_weights = sum_all_weights + particles[i].weight;
   }
 
-
+  for (int i = 0; i < num_particles; i++)
+  {
+    particles[i].weight = particles[i].weight/sum_all_weights;
+  }
 }
 
 void ParticleFilter::resample() {
