@@ -30,8 +30,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 20;  // TODO: Set the number of particles
-  //std::vector<Particle> particles{};
+  num_particles = 100;  // TODO: Set the number of particles
   
   // Create a normal distribution for x,y,theta with the associated variances
   std::default_random_engine gen;
@@ -105,9 +104,9 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> landmarks,
    */
 
 double min_dist{std::numeric_limits<double>::max()};
-  for (int i = 0; i < observations.size(); i++)
+  for (size_t i = 0; i < observations.size(); i++)
   {
-    for (int j = 0; j < landmarks.size(); j++)
+    for (size_t j = 0; j < landmarks.size(); j++)
     {
       double current_dist{dist(observations[i].x, observations[i].y, landmarks[j].x, landmarks[j].y)};
       if (current_dist < min_dist)
@@ -141,7 +140,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   {
     //Transform measurements in map coordinate system (homogeneous transformation) for each particle
     vector<LandmarkObs> observations_in_map_ref_system{};
-    for  (int j = 0; j < observations.size(); j++)
+    for  (size_t j = 0; j < observations.size(); j++)
     {
       LandmarkObs current_map_obs;
       current_map_obs.id = observations[j].id;
@@ -153,7 +152,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     //Find the landmarks (on map) in the sensor range for each particle:
     //The distance between particle and landmark has to be smaller than sensor_range
     vector<LandmarkObs> seen_landmarks{};
-    for  (int j = 0; j < map_landmarks.landmark_list.size(); j++)
+    for  (size_t j = 0; j < map_landmarks.landmark_list.size(); j++)
     {
       double particle2landmark_dist{dist(particles[i].x, particles[i].y, map_landmarks.landmark_list[j].x_f, map_landmarks.landmark_list[j].y_f)};
       if (particle2landmark_dist < sensor_range)
@@ -167,9 +166,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     //Update the weight for each particle
     particles[i].weight = 1.0;
-    for  (int j = 0; j < observations_in_map_ref_system.size(); j++)
+    for  (size_t j = 0; j < observations_in_map_ref_system.size(); j++)
     {
-      for (int k = 0; k < seen_landmarks.size(); k++)
+      for (size_t k = 0; k < seen_landmarks.size(); k++)
       {
         if (seen_landmarks[k].id == observations_in_map_ref_system[j].id) //Update weight when the closest landmark is found
         {
@@ -178,13 +177,13 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         }
       }
     }
-    // weights[i] = particles[i].weight;
     sum_all_weights = sum_all_weights + particles[i].weight;
   }
 
   for (int i = 0; i < num_particles; i++)
   {
     particles[i].weight = particles[i].weight/sum_all_weights;
+    weights[i] = particles[i].weight;
   }
 }
 
@@ -195,21 +194,26 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
-  
-}
 
-void ParticleFilter::SetAssociations(Particle& particle, 
-                                     const vector<int>& associations, 
-                                     const vector<double>& sense_x, 
-                                     const vector<double>& sense_y) {
-  // particle: the particle to which assign each listed association, 
-  //   and association's (x,y) world coordinates mapping
-  // associations: The landmark id that goes along with each listed association
-  // sense_x: the associations x mapping already converted to world coordinates
-  // sense_y: the associations y mapping already converted to world coordinates
-  particle.associations= associations;
-  particle.sense_x = sense_x;
-  particle.sense_y = sense_y;
+  //Variable initialization 
+  std::default_random_engine gen;
+  vector<Particle> new_set_particles;
+  std::uniform_int_distribution<int> unif_dist_index(0, num_particles-1);
+  auto unif_index{unif_dist_index(gen)};
+  double max_weight{*max_element(weights.begin(), weights.end())};
+  std::uniform_real_distribution<double> unif_dist_weight(0.0, max_weight);
+  double beta{0.0};
+
+  //Wheel
+  for (int i = 0; i < num_particles; i++) {
+    beta = beta + unif_dist_weight(gen) * 2.0;
+    while (weights[unif_index] < beta) {
+      beta = beta - weights[unif_index];
+      unif_index = (unif_index + 1) % num_particles;
+    }
+    new_set_particles.push_back(particles[unif_index]);
+  }
+  particles = new_set_particles;
 }
 
 string ParticleFilter::getAssociations(Particle best) {
